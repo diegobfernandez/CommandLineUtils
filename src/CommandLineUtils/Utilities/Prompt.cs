@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace McMaster.Extensions.CommandLineUtils
@@ -27,7 +28,53 @@ namespace McMaster.Extensions.CommandLineUtils
         /// <returns>True is 'yes'</returns>
         public static bool GetYesNo(string prompt, bool defaultAnswer, ConsoleColor? promptColor = null, ConsoleColor? promptBgColor = null)
         {
-            var answerHint = defaultAnswer ? "[Y/n]" : "[y/N]";
+            var truthyValues = new[] { "y", "yes" };
+            var falsyValues = new[] { "n", "no" };
+            var truthyHint = "y";
+            var falsyHint = "n";
+            return GetBoolean(prompt, defaultAnswer, truthyValues, falsyValues, truthyHint, falsyHint, promptColor, promptBgColor);
+        }
+
+        /// <summary>
+        /// Gets a boolean response from the console after displaying a <paramref name="prompt" />.
+        /// <para>
+        /// The parsing is case insensitive. Valid responses must be configured.
+        /// </para>
+        /// </summary>
+        /// <param name="prompt">The question to display on the command line</param>
+        /// <param name="defaultAnswer">If the user provides an empty response, which value should be returned</param>
+        /// <param name="truthyValues">These responses yield a true value</param>
+        /// <param name="falsyValues">These responses yield a false value</param>
+        /// <param name="truthyHint"></param>
+        /// <param name="falsyHint"></param>
+        /// <param name="promptColor">The console color to display</param>
+        /// <param name="promptBgColor">The console background color for the prompt</param>
+        /// <returns>True is 'yes'</returns>
+        public static bool GetBoolean(string prompt, bool defaultAnswer, IEnumerable<string> truthyValues, IEnumerable<string> falsyValues, string truthyHint, string falsyHint, ConsoleColor? promptColor = null, ConsoleColor? promptBgColor = null)
+        {
+            Func<bool, string, string> toUpper = (u, s) => u ? s.ToUpper() : s.ToLower();
+
+            if (truthyValues is null || !truthyValues.Any())
+            {
+                truthyValues = new[] { "y", "yes" };
+            }
+
+            if (falsyValues is null || !falsyValues.Any())
+            {
+                falsyValues = new[] { "n", "no" };
+            }
+
+            if (string.IsNullOrWhiteSpace(truthyHint))
+            {
+                truthyHint = truthyValues.First();
+            }
+
+            if (string.IsNullOrWhiteSpace(falsyHint))
+            {
+                falsyHint = falsyValues.First();
+            }
+
+            var answerHint = $"[{toUpper(defaultAnswer, truthyHint)}/{toUpper(defaultAnswer, truthyHint)}]";
             do
             {
                 Write($"{prompt} {answerHint}", promptColor, promptBgColor);
@@ -44,17 +91,17 @@ namespace McMaster.Extensions.CommandLineUtils
                     return defaultAnswer;
                 }
 
-                if (resp == "n" || resp == "no")
+                if (falsyValues.Contains(resp))
                 {
                     return false;
                 }
 
-                if (resp == "y" || resp == "yes")
+                if (truthyValues.Contains(resp))
                 {
                     return true;
                 }
 
-                Console.WriteLine($"Invalid response '{resp}'. Please answer 'y' or 'n' or CTRL+C to exit.");
+                Console.WriteLine($"Invalid response '{resp}'. Please answer '{truthyHint}' or '{falsyHint}' or CTRL+C to exit.");
             }
             while (true);
         }
